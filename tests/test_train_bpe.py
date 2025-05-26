@@ -5,7 +5,7 @@ from .adapters import run_train_bpe
 from .common import FIXTURES_PATH, gpt2_bytes_to_unicode
 
 
-def test_train_bpe_speed():
+def test_train_bpe_speed(): # test the efficiency of BPE training
     """
     Ensure that BPE training is relatively efficient by measuring training
     time on this small dataset and throwing an error if it takes more than 1.5 seconds.
@@ -24,7 +24,7 @@ def test_train_bpe_speed():
     assert end_time - start_time < 1.5
 
 
-def test_train_bpe():
+def test_train_bpe(): # 
     input_path = FIXTURES_PATH / "corpus.en"
     vocab, merges = run_train_bpe(
         input_path=input_path,
