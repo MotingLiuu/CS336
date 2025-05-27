@@ -1,4 +1,4 @@
-# re
+# regex
 
 **Zero-width match**
 
@@ -85,3 +85,65 @@ re.split(r'(\W*)', '...words...')
 ['', '...', '', '', 'w', '', 'o', '', 'r', '', 'd', '', 's', '...', '', '', '']
 ```
 
+
+
+# multiprocess
+
+Use `fork()` to create a subprocess.
+
+```py
+import os
+
+print(f'Process {os.getpid()}')
+
+pid = os.fork() # os.fork()会将当前进程复制一份，作为新的子进程。父进程和子进程都从fork()这一行继续执行。唯一不同的是父进程fork()返回子进程PID，而子进程返回0
+if pid == 0:
+    print('I am child process (%s) and my parent is %s.' % (os.getpid(), os.getppid()))
+else:
+    print('I (%s) just created a child process (%s).' % (os.getpid(), pid))
+```
+
+Use `Process` of `multiprocessing` to create a subprocess
+
+```py
+from multiprocessing import Process
+import os
+
+# 子进程要执行的代码
+def run_proc(name):
+    print('Run child process %s (%s)...' % (name, os.getpid()))
+
+if __name__=='__main__':
+    print('Parent process %s.' % os.getpid())
+    p = Process(target=run_proc, args=('test',)) # target是子进程运行的函数，args是函数的参数
+    print('Child process will start.')
+    p.start() # 启动子进程
+    p.join() # join() = 等到子进程结束 + 帮操作系统“收尸”（资源回收。join() 内部会调用底层操作系统的 wait() 系统调用，将子进程彻底清理、回收掉，
+    print('Child process end.')
+```
+
+Use `pool` to create a batch of subprocess
+
+```py
+from multiprocessing import Pool
+import os, time, random
+
+def long_time_task(name):
+    print('Run task %s (%s)...' % (name, os.getpid()))
+    start = time.time()
+    time.sleep(1)
+    end = time.time()
+    print('Task %s runs %0.2f seconds.' % (name, (end - start)))
+
+if __name__=='__main__':
+    print('Parent process %s.' % os.getpid())
+    p = Pool(16) # 创建了一个四个进程的进程池
+    start = time.time()
+    for i in range(16):
+        p.apply_async(long_time_task, args=(i,)) # 进程池会自动管理所有进程的，启动，调度，复用，回收。只需要使用apply_async()提交任务。使用apply_async()提交任务之后，主进程还会继续。不会等待子进程结束。
+    print('Waiting for all subprocesses done...')
+    p.close() # 结束这个进程池，不再接受新的任务
+    p.join() # 等待池中所有进程结束任务
+    end = time.time()
+    print(f'All subprocesses done. time:{end - start}')
+```
