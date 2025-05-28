@@ -3,7 +3,7 @@ import time
 import random
 import argparse
 import sys
-from multiprocessing import Pool, Process
+from multiprocessing import Pool, Process, Queue
 import subprocess
 
 # =======================
@@ -60,12 +60,40 @@ def example_process():
 def example_subprocess():
     result = subprocess.run(['ls', '-l'], capture_output=True, text=True)
     print(result.stdout)  # 输出命令的结果
+    
+def example_comm():
+    
+    def write(q):
+        print('Process to write: %s' % os.getpid())
+        for value in ['A', 'B', 'C']:
+            print('Put %s to queue...' % value)
+            q.put(value)
+            time.sleep(random.random())
+    
+    def read(q):
+        print('Process to read: %s' % os.getpid())
+        while True:
+            value = q.get(True) # 数据只能被读取一次，当一个数据被get()后就从队列中消失
+            print('Get %s from queue.' % value)
+            
+    q = Queue()
+    pw = Process(target=write, args=(q,))
+    pr = Process(target=read, args=(q,))
+    # 启动子进程pw，写入:
+    pw.start()
+    # 启动子进程pr，读取:
+    pr.start()
+    # 等待pw结束:
+    pw.join()
+    # pr进程里是死循环，无法等待其结束，只能强行终止:
+    pr.terminate()
+    
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run multiprocessing/subprocess examples')
     parser.add_argument(
         'example',
-        choices=['fork', 'pool', 'process', 'subprocess'],
+        choices=['fork', 'pool', 'process', 'subprocess', 'queue'],
         help='Which example to run'
     )
     args = parser.parse_args()
@@ -81,3 +109,5 @@ if __name__ == '__main__':
         example_process()
     elif args.example == 'subprocess':
         example_subprocess()
+    elif args.example == 'queue':
+        example_comm()
