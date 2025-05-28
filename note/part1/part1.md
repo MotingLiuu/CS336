@@ -1,30 +1,38 @@
-# regex
+# Regex
 
-**Zero-width match**
+## Zero-width match
 
-表示某个条件成立的那个位置，但是没有提取字符
+A **zero-width match** matches a *position* where some condition is true, but does not actually capture any characters. Typical zero-width assertions are:
 
-`^`, `$`, `\b`, `(?=...)`, `(?!=...)`
+* `^` (start of string)
+* `$` (end of string)
+* `\b` (word boundary)
+* `(?=...)` (lookahead)
+* `(?!...)` (negative lookahead)
 
+---
 
+## `re.finditer()`
 
-**re.finditer()**会返回一个迭代器，每一个结果是一个`re.Match`对象
+* Returns an iterator of `re.Match` objects, one for each match in the string.
 
-```py
+**Example:**
+
+```python
 import re
-
-pattern = r'\d+'  # 匹配一个或多个数字
+pattern = r'\d+'  # Match one or more digits
 s = "abc123def456ghi789"
-
 matches = re.finditer(pattern, s)
 for match in matches:
-    print(match)         # Match对象
-    print(match.group()) # 匹配到的字符串
-    print(match.start()) # 匹配开始位置
-    print(match.end())   
+    print(match)         # Match object
+    print(match.group()) # Matched substring
+    print(match.start()) # Start position
+    print(match.end())   # End position
 ```
 
-```bash
+**Output:**
+
+```
 <re.Match object; span=(3, 6), match='123'>
 123
 3
@@ -39,92 +47,100 @@ for match in matches:
 18
 ```
 
-```py
+---
+
+**Zero-width match example:**
+
+```python
 import re
 s = "hi! bye."
-# 下面的正则在每个单词边界零宽匹配
 matches = list(re.finditer(r'\b', s))
 for m in matches:
     print(m.start(), m.group())
 ```
 
-```bash
-0 
-2 
-4 
-7 
+**Output:**
+
+```
+0
+2
+4
+7
 ```
 
-- **普通匹配**：`start()` 是匹配到的子串的第一个字符的下标。
-- **零宽度匹配**：`start()` 返回的是“匹配发生的位置”，可以理解为“字符之间的间隔下标”，也就是“切片分隔点”。
+* For zero-width matches, `start()` returns the position ("gap") between characters, not an actual character index.
+* For a *regular* match, `start()` gives the index of the first character in the matched substring.
+* For a *zero-width* match, `start()` gives the "split point" between characters where the assertion holds.
 
+---
 
+## `re.split()`
 
-**re.split()**
+* Splits a string wherever the pattern matches.
+* If a match is at the beginning/end, you get empty strings in the result.
+* Zero-width matches act as split points between characters.
+* If a separator matches real characters, it consumes those characters; if not, it splits at the zero-width point.
 
-如果开头被匹配，则第一个`re.match`是`''`，末尾被匹配则最后一个`re.match`是`''`
+![split example 1](1.png)
 
-零间隔返回的`re.match`对象的坐标是间隔的坐标。
+**Result:**
 
-**优先匹配能消耗掉字符的分隔符，对于不能消耗任何字符的地方，也会把这些位置当作分割点。**
+![split example 2](2.png)
 
-![](1.png)
+For example, with zero-width matches:
 
-得到的结果
-
-![](2.png)
-
-第一个匹配到`...`，之后对`words...`进行匹配，匹配到`''`，之后对没有开头的`words...`匹配，匹配到`w` `o`之间的空隙... 结果为
-
-```bash
+```
 ['', '', 'w', 'o', 'r', 'd', 's', '', '']
 ```
 
-```py
+For a pattern matching non-word characters:
+
+```python
 re.split(r'(\W*)', '...words...')
 ['', '...', '', '', 'w', '', 'o', '', 'r', '', 'd', '', 's', '...', '', '', '']
 ```
 
+---
 
+# Multiprocessing
 
-# multiprocess
+## Use `fork()` to create a subprocess
 
-Use `fork()` to create a subprocess.
-
-```py
+```python
 import os
-
 print(f'Process {os.getpid()}')
-
-pid = os.fork() # os.fork()会将当前进程复制一份，作为新的子进程。父进程和子进程都从fork()这一行继续执行。唯一不同的是父进程fork()返回子进程PID，而子进程返回0
+pid = os.fork()  # Duplicates current process
 if pid == 0:
     print('I am child process (%s) and my parent is %s.' % (os.getpid(), os.getppid()))
 else:
     print('I (%s) just created a child process (%s).' % (os.getpid(), pid))
 ```
 
-Use `Process` of `multiprocessing` to create a subprocess
+---
 
-```py
+## Use `Process` from `multiprocessing` to create a subprocess
+
+```python
 from multiprocessing import Process
 import os
 
-# 子进程要执行的代码
 def run_proc(name):
     print('Run child process %s (%s)...' % (name, os.getpid()))
 
 if __name__=='__main__':
     print('Parent process %s.' % os.getpid())
-    p = Process(target=run_proc, args=('test',)) # target是子进程运行的函数，args是函数的参数
+    p = Process(target=run_proc, args=('test',))
     print('Child process will start.')
-    p.start() # 启动子进程
-    p.join() # join() = 等到子进程结束 + 帮操作系统“收尸”（资源回收。join() 内部会调用底层操作系统的 wait() 系统调用，将子进程彻底清理、回收掉，
+    p.start()
+    p.join()  # Wait for child to finish
     print('Child process end.')
 ```
 
-Use `pool` to create a batch of subprocess
+---
 
-```py
+## Use `Pool` to manage a batch of subprocesses
+
+```python
 from multiprocessing import Pool
 import os, time, random
 
@@ -137,13 +153,65 @@ def long_time_task(name):
 
 if __name__=='__main__':
     print('Parent process %s.' % os.getpid())
-    p = Pool(16) # 创建了一个四个进程的进程池
+    p = Pool(16)
     start = time.time()
     for i in range(16):
-        p.apply_async(long_time_task, args=(i,)) # 进程池会自动管理所有进程的，启动，调度，复用，回收。只需要使用apply_async()提交任务。使用apply_async()提交任务之后，主进程还会继续。不会等待子进程结束。
+        p.apply_async(long_time_task, args=(i,))
     print('Waiting for all subprocesses done...')
-    p.close() # 结束这个进程池，不再接受新的任务
-    p.join() # 等待池中所有进程结束任务
+    p.close()  # No more new tasks
+    p.join()   # Wait for all to finish
     end = time.time()
     print(f'All subprocesses done. time:{end - start}')
 ```
+
+---
+
+## Use `Queue` to share data between processes
+
+```python
+def write(q):
+    print('Process to write: %s' % os.getpid())
+    for value in ['A', 'B', 'C']:
+        print('Put %s to queue...' % value)
+        q.put(value)
+        time.sleep(random.random())
+
+def read(q):
+    print('Process to read: %s' % os.getpid())
+    while True:
+        value = q.get(True)
+        print('Get %s from queue.' % value)
+
+q = Queue()
+pw = Process(target=write, args=(q,))
+pr = Process(target=read, args=(q,))
+pw.start()
+pr.start()
+pw.join()
+pr.terminate()
+```
+
+---
+
+# Notes on Variables and Memory in Multiprocessing
+
+1. **Passing variables and instances**
+
+   * Multiprocessing does *not* share memory (unlike threads). Each process has its own independent memory space.
+   * Any parameters or objects you pass (including instances/methods/attributes) are **pickled and copied** for the child process.
+   * If you pass an instance method, the *whole instance* is pickled and sent.
+   * If you only pass function arguments, only those are pickled.
+
+2. **Copies and Read-Only**
+
+   * Variables/instances/attributes in a child are just *copies*. They are not kept in sync with the parent or other children.
+   * The child can read them, but cannot update them for the parent.
+
+3. **fork vs. spawn (Platform differences)**
+
+   * **Linux fork:** The child inherits the parent’s memory (copy-on-write). At first, the child can "see" everything the parent had, but changes are not shared back.
+   * **Windows/macOS spawn:** The child launches a new interpreter and re-imports the main module. The child only receives what you *explicitly* pass (by pickling); it cannot see all parent memory directly.
+
+4. **True sharing between processes:**
+
+   * Use `multiprocessing.Manager()`, `Value`, or `Array` to share data for real.
