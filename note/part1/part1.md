@@ -309,7 +309,7 @@ def test_needsfiles(tmp_path):
     assert 0
 ```
 
-List the name `tmp_path` in the test function signature and `pytest`  will lookup and call a fixture factory to create the resorce before performing the test function all. 
+List the name `tmp_path` in the test function signature and `pytest`  will lookup and call a fixture factory to create the resorce before performing the test function all.
 
 ```bash
 ============================================================================================================================= test session starts =============================================================================================================================
@@ -337,4 +337,136 @@ test_tmp_path.py:3: AssertionError
 FAILED test_tmp_path.py::test_needsfiles - assert 0
 ============================================================================================================================== 1 failed in 0.07s ===========
 ```
+
+
+
+**Run tests by keyword expressions**
+
+```py
+class TestMyClass:
+    def test_something(self):
+        pass
+    def test_method_simple(self):
+        pass
+class TestOtherClass:
+    def test_method(self):
+        pass
+```
+
+```bash
+pytest test_keyword.py -k "TestMyClass and not test_method"
+```
+
+
+
+**Specifying a specific parametrization of a test**
+
+```bash
+pytest tests/test_mod.py::test_func[x1,y2]
+```
+
+
+
+**Run tests by marker expression**
+
+```py
+pytest -m slow
+```
+
+```bash
+pytest -m slow
+```
+
+
+
+**read from a file using** **`@`** **@** **prefix**
+
+```bash
+pytest @tests_to_run.txt
+```
+
+```txt
+tests/test_file.py
+tests/test_mod.py::test_func[x1,y2]
+tests/test_mod.py::TestClass
+-m slow
+```
+
+
+
+## Fixture
+
+When pytest goes to run a test, it looks at the parameters in that test function’s signature, and then searches for fixtures that have the same names as those parameters. Once pytest finds them, it runs those fixtures, captures what they returned (if anything), and passes those objects into the test function as arguments.
+
+```py
+import pytest
+
+
+class Fruit:
+    def __init__(self, name):
+        self.name = name
+        self.cubed = False
+
+    def cube(self):
+        self.cubed = True
+
+
+class FruitSalad:
+    def __init__(self, *fruit_bowl):
+        self.fruit = fruit_bowl
+        self._cube_fruit()
+
+    def _cube_fruit(self):
+        for fruit in self.fruit:
+            fruit.cube()
+
+
+# Arrange
+@pytest.fixture
+def fruit_bowl():
+    return [Fruit("apple"), Fruit("banana")]
+
+
+def test_fruit_salad(fruit_bowl):
+    # Act
+    fruit_salad = FruitSalad(*fruit_bowl)
+
+    # Assert
+    assert all(fruit.cubed for fruit in fruit_salad.fruit)
+```
+
+
+
+`fixture` marked with `@pytest.fixture(autouse=True)` would be requested automatically.
+
+```py
+# contents of test_append.py
+import pytest
+
+
+@pytest.fixture
+def first_entry():
+    return "a"
+
+
+@pytest.fixture
+def order(first_entry):
+    return []
+
+
+@pytest.fixture(autouse=True)
+def append_first(order, first_entry):
+    return order.append(first_entry)
+
+
+def test_string_only(order, first_entry):
+    assert order == [first_entry]
+
+
+def test_string_and_int(order, first_entry):
+    order.append(2)
+    assert order == [first_entry, 2]
+```
+
+The excuting order depends on the dependence between fixtures.
 
