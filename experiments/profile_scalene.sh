@@ -9,5 +9,5 @@ if [ "$2" ]; then
 fi
 
 echo "📊 Profiling $SCRIPT_PATH..."
-PYTHONPATH=. scalene --html --profile-all --reduced-profile --outfile "$REPORT_PATH" "$SCRIPT_PATH"
+PYTHONPATH=. scalene --html --profile-all --reduced-profile --profile-exclude threading --outfile "$REPORT_PATH" "$SCRIPT_PATH"
 echo "✅ Done. Report saved to $REPORT_PATH"
