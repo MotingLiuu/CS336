@@ -546,3 +546,15 @@ logging.debug('This message should appear on the console')
 logging.info('So should this')
 logging.warning('And this, too')
 ```
+
+Displaying the data/time in messages
+
+```py
+import logging
+logging.basicConfig(format='%(asctime)s %(message)s')
+logging.warning('is when this event was logged.')
+```
+
+```py
+
+```
