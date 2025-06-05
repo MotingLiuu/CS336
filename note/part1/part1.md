@@ -490,5 +490,59 @@ The excuting order depends on the dependence between fixtures.
 # logging 
 
 ```py
+# myapp.py
+import logging
+import mylib
+logger = logging.getLogger(__name__) # creates a module level logger
 
+def main():
+    logging.basicConfig(filename='myapp.log', level=logging.INFO)
+    logger.info('Started')
+    mylib.do_something()
+    logger.info('Finished')
+
+if __name__ == '__main__':
+    main()
+```
+
+```py
+# mylib.py
+import logging
+logger = logging.getLogger(__name__)
+
+def do_something():
+    logger.info('Doing something')
+```
+
+Logged messages to the module-level logger get forwarded to handlers of loggers in higher-level modules, all the way to the highest-level logger known as the root logger;
+
+```py
+# assuming loglevel is bound to the string value obtained from the
+# command line argument. Convert to upper case to allow the user to
+# specify --log=DEBUG or --log=debug
+numeric_level = getattr(logging, loglevel.upper(), None)
+if not isinstance(numeric_level, int):
+    raise ValueError('Invalid log level: %s' % loglevel)
+logging.basicConfig(level=numeric_level, ...)
+```
+
+
+
+## logging vriable data
+
+```py
+import logging
+logging.warning('%s before you %s', 'Look', 'leap!')
+```
+
+
+
+## Changing the format of displayed message
+
+```py
+import logging
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+logging.debug('This message should appear on the console')
+logging.info('So should this')
+logging.warning('And this, too')
 ```
