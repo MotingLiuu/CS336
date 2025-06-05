@@ -370,16 +370,31 @@ pytest tests/test_mod.py::test_func[x1,y2]
 **Run tests by marker expression**
 
 ```py
-pytest -m slow
+import pytest
+
+@pytest.mark.slow
+def test_deep_model():
+    ...
 ```
 
 ```bash
 pytest -m slow
 ```
 
+Support exprissions
+
+```bash
+pytest -m "slow or network"
+pytest -m "not slow"
+```
 
 
-**read from a file using** **`@`** **@** **prefix**
+
+
+
+
+
+**read from a file using** **`@`** **@** **@** **prefix**
 
 ```bash
 pytest @tests_to_run.txt
@@ -470,3 +485,10 @@ def test_string_and_int(order, first_entry):
 
 The excuting order depends on the dependence between fixtures.
 
+
+
+# logging 
+
+```py
+
+```
