@@ -3,7 +3,7 @@
 ## unicode 1
 
 1. `chr(0)`  returns '\x00'
-2. String representation of '\x00' is "'\\x00'", while its printed representation appears as an invisible, non-printing character.
+2. String representation of '\x00' is "'\x00'", while its printed representation appears as an invisible, non-printing character.
 3. 'this is a test\x00string' and this is a teststring
 
 ## unicode 2
@@ -19,13 +19,12 @@
 
    1. 
 
-      ```py
-      >>> import regex as re
-      >>> PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
-      >>> re.findall(PAT, "some text that i'll pre-tokenize")
-      ['some', ' text', ' that', ' i', "'ll", ' pre', '-', 'tokenize']
-      ```
-
+   ```py
+   >>> import regex as re
+   >>> PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
+   >>> re.findall(PAT, "some text that i'll pre-tokenize")
+   ['some', ' text', ' that', ' i', "'ll", ' pre', '-', 'tokenize']
+   ```
 
 3. Compute BPE merges
 
@@ -44,3 +43,14 @@
 
 5. 
 
+
+
+# pytest
+
+Pytest在测试通过时会默认不显示log，可以通过
+
+`--log-cli-level` 来告诉控制台显示特定日志级别的消息
+
+```bash
+pytest tests/test_bpe_tokenizer.py::test_from_pretrained --log-cli-level=INFO
+```
