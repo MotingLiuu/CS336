@@ -54,3 +54,81 @@ Pytest在测试通过时会默认不显示log，可以通过
 ```bash
 pytest tests/test_bpe_tokenizer.py::test_from_pretrained --log-cli-level=INFO
 ```
+
+
+
+# Transformer
+
+## Position-Wise Feed-Forward Network
+
+**SwiGU**
+
+![](a1-1.png)
+
+$Sigmoid(x)=\sigma(x)=\frac{1}{1+e^{-x}}$
+
+$SiLU=\frac{x}{1+e^{-x}}$, similar to ReLU, but is smooth at zero.
+
+$GLU(x, W_1, W_2) = \sigma(W_1x)\odot W_2x$, a improved SiLU, amming to reduce the vanishing gradient problem for deep architectures by providing a linear path for the gradients, while retaining non-linear capabilities. SiLU has the same ability, but no **gate**.
+
+**GLU is more flexiable**
+
+$FFN(x)=SwiGLU(x, W_1, W_2, W_3)=W_2(SiLU(W_1x)\odot W_3 x)$
+
+
+
+## Relative Positional Embeddings
+
+For tokens at position $i$,
+
+$$
+R_k^i = \begin{bmatrix} \cos(\theta_{i,k}) & -\sin(\theta_{i,k}) \\ \sin(\theta_{i,k}) & \cos(\theta_{i,k}) \end{bmatrix}.
+$$
+
+$$
+R^i = \begin{bmatrix}
+R_1^i & 0 & 0 & \cdots & 0 \\
+0 & R_2^i & 0 & \cdots & 0 \\
+0 & 0 & R_3^i & \cdots & 0 \\
+\vdots & \vdots & \vdots & \ddots & \vdots \\
+0 & 0 & 0 & \cdots & R_{d/2}^i
+\end{bmatrix},
+$$
+
+For a given query token $q^{(i)}=W_qx^{(i)}\in R^d$ at position $i$, $q'^{(i)}=R^iq^{(i)}=R^iW_qx^{(i)}$
+
+$\theta_{i,k}=\frac{i}{\Theta^{2k/d}}$ for $k \in \{0, .., d/2-1\}$
+
+
+
+There is a little bug in the assignment1 pdf,
+
+![](a1-3.png)
+
+The correct k is from 0 to d/2-1
+
+
+
+# Torch
+
+## self.register_buffer("my_buffter", torch.tensor([10.0, 11/0]))
+
+![](a1-2.png)
+
+
+
+## torch.max(x: Float[Tensor, "..."], dim=-1)
+
+return
+
+**max_value** and **max_value_index**
+
+```python
+x = torch.tensor([[1, 5], [8, 2]])
+torch.max(x, dim=-1, keepdim=True)
+```
+
+return `(tensor([[5.], [8.]]), tensor([[1], [0]]))`
+
+
+
