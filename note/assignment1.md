@@ -109,6 +109,22 @@ The correct k is from 0 to d/2-1
 
 
 
+## Attention
+
+problem:
+
+![](a1-4.png)
+
+should be $softmax(\frac{Qk^T}{\sqrt{d_k}})V$
+
+
+
+**MHA**
+
+$Q_i, K_i, V_i$ being slice number $i \in \{1,...,h\}$ of size $d_k$ or $d_v$ of the embedding dimension for $Q, K$, and $V$respectively. 
+
+$MultiHeadSelfAttention(x) = W_OMultiHead(W_Q x, W_K x, W_V x) $
+
 # Torch
 
 ## self.register_buffer("my_buffter", torch.tensor([10.0, 11/0]))
@@ -129,6 +145,3 @@ torch.max(x, dim=-1, keepdim=True)
 ```
 
 return `(tensor([[5.], [8.]]), tensor([[1], [0]]))`
-
-
-
