@@ -45,6 +45,67 @@
 
 
 
+# Experiments with tokenizer
+
+First select 10 articles randomly in each file.
+
+```py
+samples_tinystories = select_articles_from_file_corrected(tinystories_path, 10)
+samples_owt = select_articles_from_file_corrected(owt_path, 10)
+```
+
+Then encodes the samples with Tokenizer trained in TinyStories and Tokenizer trained in Owt.
+
+```py
+tinystories_tiny_encoded = [tiny_tokenizer.encode(sample) for sample in samples_tinystories]
+owt_tiny_encoded = [tiny_tokenizer.encode(sample) for sample in samples_owt]
+tinystories_owt_encoded = [owt_tokenizer.encode(sample) for sample in samples_tinystories]
+owt_owt_encoded = [owt_tokenizer.encode(sample) for sample in samples_owt]
+```
+
+```py
+tinystories_sample_bytes = [sample.encode('utf-8') for sample in samples_tinystories]
+owt_sample_bytes = [sample.encode('utf-8') for sample in samples_owt]
+tiny_tiny_ratio = [len(sample) / len(encoded_sample) for sample, encoded_sample in zip(tinystories_sample_bytes, tinystories_tiny_encoded)]
+owt_tiny_ratio = [len(sample) / len(encoded_sample) for sample, encoded_sample in zip(owt_sample_bytes, owt_tiny_encoded)]
+tiny_owt_ratio = [len(sample) / len(encoded_sample) for sample, encoded_sample in zip(tinystories_sample_bytes, tinystories_owt_encoded)]
+owt_owt_ratio = [len(sample) / len(encoded_sample) for sample, encoded_sample in zip(owt_sample_bytes, owt_owt_encoded)]
+print(f"Tiny Stories compression ratio by Tiny Stories Tokenizer (bytes/token): {sum(tiny_tiny_ratio) / len(tiny_tiny_ratio)}")
+print(f"OWT compression ratio by Tiny Stories Tokenizer (bytes/token): {sum(owt_tiny_ratio) / len(owt_tiny_ratio)}")
+print(f"Tiny Stories compression ratio by OWT Tokenizer (bytes/token): {sum(tiny_owt_ratio) / len(tiny_owt_ratio)}")
+print(f"OWT compression ratio by OWT Tokenizer (bytes/token): {sum(owt_owt_ratio) / len(owt_owt_ratio)}")
+```
+
+![](a1-19.png)
+
+Tokenizer performs better on the training article.
+
+Tokenizer trained on larger article performs better.
+
+```py
+sta_time = time.time()
+sample_owt_tokenized = [owt_tokenizer.encode(sample) for sample in samples_owt]
+end_time = time.time()
+total_bytes = sum([len(sample.encode('utf-8')) for sample in samples_owt])
+total_tokens = sum([len(encoded_sample) for encoded_sample in sample_owt_tokenized])
+print(f"OWT Tokenization Time: {end_time - sta_time} seconds")
+print(f"OWT Tokenization Compression Ratio (bytes/token): {total_bytes / total_tokens}")
+print(f"bytes/second: {total_bytes / (end_time - sta_time)}")
+print(f"tokens/second: {total_tokens / (end_time - sta_time)}")
+```
+
+Throughput of OwtTokenizer is around 7800 bytes/second.
+
+Tokenizes a 825gb file would cost 30.8h.
+
+$$
+825*1024*1024*1024/7800/60/60 \approx 31546
+$$
+
+
+
+
+
 # pytest
 
 Pytest在测试通过时会默认不显示log，可以通过
@@ -251,24 +312,28 @@ print("\n沿着 dim=1 收集:\n", gathered_dim1)
 
 ## torch.optim.Optimizer
 
-**`torch.optim.Optimizer`** **torch.optim.Optimizer** **torch.optim.Optimizer** **torch.optim.Optimizer 基类的** **`__init__`** **__init__** **init** **init** **方法承担着以下几个关键职责：**
+**`torch.optim.Optimizer`** **torch.optim.Optimizer** **torch.optim.Optimizer** **torch.optim.Optimizer** **torch.optim.Optimizer** **torch.optim.Optimizer 基类的** **`__init__`** **__init__** **init** **init** **init** **init** **方法承担着以下几个关键职责：**
 
-a. **参数的注册与管理：** `Optimizer` 基类会接收 `params`，并将其内部组织成**参数组 (********`param_groups`** **param_groups** **param_groups** **param_groups)**。每个参数组是一个字典，其中包含： * `'params'`: 一个列表，存储属于该组的所有参数 `Tensor`。 * 以及该组特有的超参数，如 `'lr'` (学习率)、`'momentum'` (动量)、`'weight_decay'` (权重衰减) 等。
+a. **参数的注册与管理：** `Optimizer` 基类会接收 `params`，并将其内部组织成**参数组 (********`param_groups`** **param_groups** **param_groups** **param_groups** **param_groups** **param_groups)**。每个参数组是一个字典，其中包含： * `'params'`: 一个列表，存储属于该组的所有参数 `Tensor`。 * 以及该组特有的超参数，如 `'lr'` (学习率)、`'momentum'` (动量)、`'weight_decay'` (权重衰减) 等。
 
 b. **处理多种参数输入格式：** 用户传递给优化器的 `params` 可以是以下几种形式： * 一个 `Iterable` 的 `torch.Tensor` 对象（例如 `model.parameters()`）。 * 一个 `dict`，代表一个参数组（例如 `{'params': model.parameters(), 'lr': 0.01}`）。 * 一个 `list`，其中包含多个 `dict`，每个字典代表一个参数组（例如 `[{'params': param1, 'lr': 0.01}, {'params': param2, 'lr': 0.001}]`）。 `Optimizer` 基类的 `__init__` 会智能地解析这些不同格式的 `params`，并统一地存储在 `self.param_groups` 列表中。
 
 c. **设置默认超参数：** `Optimizer` 基类还会将 `defaults` 字典中的超参数（例如我们这里传入的 `lr`）与每个参数组进行关联。如果某个参数组没有明确指定某个超参数（例如没有指定自己的 `lr`），它就会使用 `defaults` 中定义的值。
 
-- **收集** **`defaults`** **defaults** **defaults** **defaults：** 当您调用 `super().__init__(params, defaults)` 时，`Optimizer` 基类首先会接收您在子类 `__init__` 中定义的 `defaults` 字典（例如，在自定义 `SGD` 中，`defaults = {"lr": lr}`）。这个 `defaults` 字典包含了**整个优化器实例的全局默认超参数值**。
-- **构建** **`param_groups`** **param_groups** **param_groups** **param_groups：** 然后，基类会遍历您传入的 `params` 参数。
+- **收集** **`defaults`** **defaults** **defaults** **defaults** **defaults** **defaults：** 当您调用 `super().__init__(params, defaults)` 时，`Optimizer` 基类首先会接收您在子类 `__init__` 中定义的 `defaults` 字典（例如，在自定义 `SGD` 中，`defaults = {"lr": lr}`）。这个 `defaults` 字典包含了**整个优化器实例的全局默认超参数值**。
+- **构建** **`param_groups`** **param_groups** **param_groups** **param_groups** **param_groups** **param_groups：** 然后，基类会遍历您传入的 `params` 参数。
 
-  - **如果** **`params`** **params** **params** **params 是一个简单的可迭代对象（如** **`model.parameters()`** **model.parameters()** **model.parameters()** **model.parameters()）：** `Optimizer` 会创建一个**唯一的参数组**。这个参数组的字典会包含 `'params'` 键（值为所有模型的参数），然后将 `defaults` 字典中的所有键值对**复制**到这个参数组字典中。 例如，`optimizer1` 的 `self.param_groups` 将会是 `[{'params': [...], 'lr': 0.01, 'momentum': 0.9}]`。
-  - **如果** **`params`** **params** **params** **params 是一个包含多个字典的列表（即您手动定义了参数组）：** `Optimizer` 会遍历这个列表中的每个字典（即每个自定义参数组）。
+  - **如果** **`params`** **params** **params** **params** **params** **params 是一个简单的可迭代对象（如** **`model.parameters()`** **model.parameters()** **model.parameters()** **model.parameters()** **model.parameters()** **model.parameters()）：** `Optimizer` 会创建一个**唯一的参数组**。这个参数组的字典会包含 `'params'` 键（值为所有模型的参数），然后将 `defaults` 字典中的所有键值对**复制**到这个参数组字典中。 例如，`optimizer1` 的 `self.param_groups` 将会是 `[{'params': [...], 'lr': 0.01, 'momentum': 0.9}]`。
+  - **如果** **`params`** **params** **params** **params** **params** **params 是一个包含多个字典的列表（即您手动定义了参数组）：** `Optimizer` 会遍历这个列表中的每个字典（即每个自定义参数组）。
 
     - 对于**每个自定义参数组**，基类会将其作为元素添加到 `self.param_groups` 列表中。
     - 更重要的是，对于每个参数组，基类会检查它**是否显式地定义了某些超参数**（例如 `'lr'`, `'weight_decay'`, `'momentum'` 等）。
     - **如果一个超参数在参数组中被显式定义，那么该参数组将使用它自己的特定值。**
-    - **如果一个超参数在参数组中没有被显式定义，那么它将从之前传入** **`super().__init__`** **super().__init__** **super().init** **super().****init** **的** **`defaults`** **字典中继承其值。**
+    - **如果一个超参数在参数组中没有被显式定义，那么它将从之前传入** **`super().__init__`** **super().__init__** **super().****init** **super().****init** **super().init** **super().****init** **的** **`defaults`** **defaults** **defaults** **字典中继承其值。**
+
+
+
+
 
 
 
@@ -554,9 +619,95 @@ Although the larger the learning rate, the faster the loss decreases, but too la
 
 
 
-## AdamW
+# AdamW
 
 AdamW is stateful:
 
 ![](a1-14.png)
+
+
+
+## Resource accounting for training with AdamW
+
+![](a1-15.png)
+
+![](a1-16.png)
+
+Memory:
+
+````
+parameters: 
+````
+
+$$
+2vocab*d+L(4d^2+2d+3d*d\_ff)+d+c^2+cd
+$$
+
+````
+activation:
+````
+
+$$
+6*cd+c^2+2d*d_ff+c*d+c*vocab
+$$
+
+````
+gradient:
+````
+
+$$
+equals\ to\ parameter
+$$
+
+````
+optimizer state:
+````
+
+$$
+2*parameter
+$$
+
+![](a1-17.png)
+
+For GPT-2 XL:
+
+$$
+4*(2*50257*1600+48*(4*1600*1600+2*1600+3*1600*6400)+1600+1024*1024+1024*1600)+6*1024*1600+1024*1024+2*1024*6400+1024*1600+1024*50257
+$$
+
+Grad, parameter, optimizer states don't relate to batch_size
+
+8.518978304 × 10^9 * 32 bits = 31.7356549203395843505859375GB
+
+
+
+batch_size related memory:
+
+7.7087744 × 10^7 * 32 bits = 0.287174224853515625GB
+
+
+
+The max size of one batch, traning with one 80GB GPU:
+
+48.63/0.287 = 169
+
+
+
+# Learning rate scheduling
+
+## cosine annealing learning rate
+
+1. current iteration $t$
+2. maximum learning rate $\alpha_{max}$
+3. minimum learning rate $\alpha_{min}$
+4. number of $warm-up$ iterations $T_w$
+5. number of cosine annealing iterations $T_c$
+
+![](a1-18.png)
+
+
+
+# Gradient_clipping
+
+The gradient for all parameters $g$, compute the $l_2-norm$. If this norm is less than a maximum value $M$, then leave $g$ as is; otherwise, scale $g$ down by a factor $\frac{M}{||g||_2+\epsilon}$, $\epsilon = 10^{-6}$
 
