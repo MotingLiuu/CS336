@@ -1,4 +1,6 @@
-# Understanding Unicode
+# Understanding Unicode336
+
+
 
 ## unicode 1
 
@@ -96,13 +98,51 @@ print(f"tokens/second: {total_tokens / (end_time - sta_time)}")
 
 Throughput of OwtTokenizer is around 7800 bytes/second.
 
-Tokenizes a 825gb file would cost 30.8h.
+Tokenizes a 825gb file would cost 31536h.
 
 $$
 825*1024*1024*1024/7800/60/60 \approx 31546
 $$
 
+Above is the throughput of tokenizer without buffer and using token_2_ids with low effiency
 
+With high efficient token_2_ids and buffer.
+
+```py
+sta_time = time.time()
+sample_owt_tokenized = [owt_tokenizer.encode(sample) for sample in samples_owt]
+end_time = time.time()
+total_bytes = sum([len(sample.encode('utf-8')) for sample in samples_owt])
+total_tokens = sum([len(encoded_sample) for encoded_sample in sample_owt_tokenized])
+print(f"OWT Tokenization Time: {end_time - sta_time} seconds")
+print(f"OWT Tokenization Compression Ratio (bytes/token): {total_bytes / total_tokens}")
+print(f"bytes/second: {total_bytes / (end_time - sta_time)}")
+print(f"tokens/second: {total_tokens / (end_time - sta_time)}")
+```
+
+![](a1-20.png)
+
+```py
+sta_time = time.time()
+sample_owt_tokenized = [tiny_tokenizer.encode(sample) for sample in samples_owt]
+end_time = time.time()
+total_bytes = sum([len(sample.encode('utf-8')) for sample in samples_owt])
+total_tokens = sum([len(encoded_sample) for encoded_sample in sample_owt_tokenized])
+print(f"OWT Tokenization Time: {end_time - sta_time} seconds")
+print(f"OWT Tokenization Compression Ratio (bytes/token): {total_bytes / total_tokens}")
+print(f"bytes/second: {total_bytes / (end_time - sta_time)}")
+print(f"tokens/second: {total_tokens / (end_time - sta_time)}")
+```
+
+![](a1-21.png)
+
+Throughput of OwtTokenizer is around 3360000 bytes/second.
+
+Tokenizes a 825gb file would cost 73h.
+
+$$
+825*1024*1024*1024/3360000/60/60 \approx 73
+$$
 
 
 
@@ -114,6 +154,46 @@ Pytest在测试通过时会默认不显示log，可以通过
 
 ```bash
 pytest tests/test_bpe_tokenizer.py::test_from_pretrained --log-cli-level=INFO
+```
+
+
+
+# IO
+
+## np.load("large_array.npy", mmap_mode="r")
+
+```py
+import numpy as np
+
+# 假设您有一个非常大的 .npy 文件，例如 'large_array.npy'
+# 使用 mmap_mode='r' (只读模式) 加载
+# 这个操作非常快，无论文件有多大
+mmap_array = np.load('large_array.npy', mmap_mode='r')
+
+# 您可以像操作普通数组一样查看它的属性，而不会加载数据
+print(f"数组形状 (Shape): {mmap_array.shape}")
+print(f"数据类型 (Dtype): {mmap_array.dtype}")
+print(f"数组总长度: {len(mmap_array)}")
+```
+
+```py
+def sample_segments_from_mmap(mmap_array: np.ndarray, n: int, m: int) -> list[np.ndarray]:
+    
+    total_length = len(mmap_array)
+    
+    if total_length < m:
+        raise ValueError("数组总长度 L 小于指定的段长度 m")
+        
+    # 随机生成n个有效的起始索引
+    # 最大有效起始索引是 total_length - m
+    max_start_index = total_length - m
+    start_indices = np.random.randint(0, max_start_index + 1, size=n)
+    
+    # 使用列表推导式高效地提取所有数据段
+    # 每次切片都只会从磁盘读取需要的数据
+    samples = [mmap_array[i : i + m] for i in start_indices]
+    
+    return samples
 ```
 
 
@@ -312,24 +392,30 @@ print("\n沿着 dim=1 收集:\n", gathered_dim1)
 
 ## torch.optim.Optimizer
 
-**`torch.optim.Optimizer`** **torch.optim.Optimizer** **torch.optim.Optimizer** **torch.optim.Optimizer** **torch.optim.Optimizer** **torch.optim.Optimizer 基类的** **`__init__`** **__init__** **init** **init** **init** **init** **方法承担着以下几个关键职责：**
+**`torch.optim.Optimizer`** **torch.optim.Optimizer** **torch.optim.Optimizer** **torch.optim.Optimizer** **torch.optim.Optimizer** **torch.optim.Optimizer** **torch.optim.Optimizer** **torch.optim.Optimizer** **torch.optim.Optimizer 基类的** **`__init__`** **__init__** **init** **init** **init** **init** **init** **init** **init** **方法承担着以下几个关键职责：**
 
-a. **参数的注册与管理：** `Optimizer` 基类会接收 `params`，并将其内部组织成**参数组 (********`param_groups`** **param_groups** **param_groups** **param_groups** **param_groups** **param_groups)**。每个参数组是一个字典，其中包含： * `'params'`: 一个列表，存储属于该组的所有参数 `Tensor`。 * 以及该组特有的超参数，如 `'lr'` (学习率)、`'momentum'` (动量)、`'weight_decay'` (权重衰减) 等。
+a. **参数的注册与管理：** `Optimizer` 基类会接收 `params`，并将其内部组织成**参数组 (********`param_groups`** **param_groups** **param_groups** **param_groups** **param_groups** **param_groups** **param_groups** **param_groups** **param_groups)**。每个参数组是一个字典，其中包含： * `'params'`: 一个列表，存储属于该组的所有参数 `Tensor`。 * 以及该组特有的超参数，如 `'lr'` (学习率)、`'momentum'` (动量)、`'weight_decay'` (权重衰减) 等。
 
 b. **处理多种参数输入格式：** 用户传递给优化器的 `params` 可以是以下几种形式： * 一个 `Iterable` 的 `torch.Tensor` 对象（例如 `model.parameters()`）。 * 一个 `dict`，代表一个参数组（例如 `{'params': model.parameters(), 'lr': 0.01}`）。 * 一个 `list`，其中包含多个 `dict`，每个字典代表一个参数组（例如 `[{'params': param1, 'lr': 0.01}, {'params': param2, 'lr': 0.001}]`）。 `Optimizer` 基类的 `__init__` 会智能地解析这些不同格式的 `params`，并统一地存储在 `self.param_groups` 列表中。
 
 c. **设置默认超参数：** `Optimizer` 基类还会将 `defaults` 字典中的超参数（例如我们这里传入的 `lr`）与每个参数组进行关联。如果某个参数组没有明确指定某个超参数（例如没有指定自己的 `lr`），它就会使用 `defaults` 中定义的值。
 
-- **收集** **`defaults`** **defaults** **defaults** **defaults** **defaults** **defaults：** 当您调用 `super().__init__(params, defaults)` 时，`Optimizer` 基类首先会接收您在子类 `__init__` 中定义的 `defaults` 字典（例如，在自定义 `SGD` 中，`defaults = {"lr": lr}`）。这个 `defaults` 字典包含了**整个优化器实例的全局默认超参数值**。
-- **构建** **`param_groups`** **param_groups** **param_groups** **param_groups** **param_groups** **param_groups：** 然后，基类会遍历您传入的 `params` 参数。
+- **收集** **`defaults`** **defaults** **defaults** **defaults** **defaults** **defaults** **defaults** **defaults** **defaults：** 当您调用 `super().__init__(params, defaults)` 时，`Optimizer` 基类首先会接收您在子类 `__init__` 中定义的 `defaults` 字典（例如，在自定义 `SGD` 中，`defaults = {"lr": lr}`）。这个 `defaults` 字典包含了**整个优化器实例的全局默认超参数值**。
+- **构建** **`param_groups`** **param_groups** **param_groups** **param_groups** **param_groups** **param_groups** **param_groups** **param_groups** **param_groups：** 然后，基类会遍历您传入的 `params` 参数。
 
-  - **如果** **`params`** **params** **params** **params** **params** **params 是一个简单的可迭代对象（如** **`model.parameters()`** **model.parameters()** **model.parameters()** **model.parameters()** **model.parameters()** **model.parameters()）：** `Optimizer` 会创建一个**唯一的参数组**。这个参数组的字典会包含 `'params'` 键（值为所有模型的参数），然后将 `defaults` 字典中的所有键值对**复制**到这个参数组字典中。 例如，`optimizer1` 的 `self.param_groups` 将会是 `[{'params': [...], 'lr': 0.01, 'momentum': 0.9}]`。
-  - **如果** **`params`** **params** **params** **params** **params** **params 是一个包含多个字典的列表（即您手动定义了参数组）：** `Optimizer` 会遍历这个列表中的每个字典（即每个自定义参数组）。
+  - **如果** **`params`** **params** **params** **params** **params** **params** **params** **params** **params 是一个简单的可迭代对象（如** **`model.parameters()`** **model.parameters()** **model.parameters()** **model.parameters()** **model.parameters()** **model.parameters()** **model.parameters()** **model.parameters()** **model.parameters()）：** `Optimizer` 会创建一个**唯一的参数组**。这个参数组的字典会包含 `'params'` 键（值为所有模型的参数），然后将 `defaults` 字典中的所有键值对**复制**到这个参数组字典中。 例如，`optimizer1` 的 `self.param_groups` 将会是 `[{'params': [...], 'lr': 0.01, 'momentum': 0.9}]`。
+  - **如果** **`params`** **params** **params** **params** **params** **params** **params** **params** **params 是一个包含多个字典的列表（即您手动定义了参数组）：** `Optimizer` 会遍历这个列表中的每个字典（即每个自定义参数组）。
 
     - 对于**每个自定义参数组**，基类会将其作为元素添加到 `self.param_groups` 列表中。
     - 更重要的是，对于每个参数组，基类会检查它**是否显式地定义了某些超参数**（例如 `'lr'`, `'weight_decay'`, `'momentum'` 等）。
     - **如果一个超参数在参数组中被显式定义，那么该参数组将使用它自己的特定值。**
-    - **如果一个超参数在参数组中没有被显式定义，那么它将从之前传入** **`super().__init__`** **super().__init__** **super().****init** **super().****init** **super().init** **super().****init** **的** **`defaults`** **defaults** **defaults** **字典中继承其值。**
+    - **如果一个超参数在参数组中没有被显式定义，那么它将从之前传入** **`super().__init__`** **super().__init__** **super().****init** **super().****init** **super().****init** **super().****init** **super().****init** **super().init** **super().****init** **的** **`defaults`** **defaults** **defaults** **defaults** **defaults** **defaults** **字典中继承其值。**
+
+
+
+
+
+
 
 
 
@@ -710,4 +796,3 @@ The max size of one batch, traning with one 80GB GPU:
 # Gradient_clipping
 
 The gradient for all parameters $g$, compute the $l_2-norm$. If this norm is less than a maximum value $M$, then leave $g$ as is; otherwise, scale $g$ down by a factor $\frac{M}{||g||_2+\epsilon}$, $\epsilon = 10^{-6}$
-
