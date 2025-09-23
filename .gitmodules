@@ -1,3 +1,6 @@
 [submodule "assignment1"]
 	path = assignment1
 	url = https://github.com/MotingLiuu/cs336_assignment1-basics.git
+[submodule "assignment2-systems"]
+	path = assignment2-systems
+	url = https://github.com/MotingLiuu/assignment2-systems.git
